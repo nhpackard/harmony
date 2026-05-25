@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Harmony Space — Voice-Leading Tessellation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#15110c; --panel:#100d09; --ink:#f3ecdb; --muted:#a0937b;
+    --hex:#cd7430; --rho:#dcb648; --tri-maj:#7c9d6a; --tri-min:#6b8db1;
+    --line:#2a241b; --glow:#f0c789;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    background:radial-gradient(135% 90% at 18% -12%,#241d14 0%,transparent 58%),var(--bg);
+    color:var(--ink);font-family:'Spline Sans Mono',monospace;
+    -webkit-font-smoothing:antialiased;padding:40px 32px 96px;
+  }
+  header{max-width:1020px;margin:0 auto 24px;}
+  .kicker{font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--hex);margin-bottom:14px;}
+  h1{font-family:'Fraunces',serif;font-weight:600;font-size:clamp(30px,4.6vw,52px);line-height:1.02;letter-spacing:-.018em;}
+  h1 em{font-style:italic;color:var(--hex);}
+  .lede{margin-top:14px;max-width:660px;color:var(--muted);font-size:13.5px;line-height:1.68;}
+  .legend{display:flex;flex-wrap:wrap;gap:9px 22px;margin:22px auto 0;max-width:1020px;font-size:11.5px;}
+  .legend div{display:flex;align-items:center;gap:9px;color:var(--muted);}
+  .legend b{color:var(--ink);font-weight:500;}
+  .sw{width:24px;height:24px;flex:none;border-radius:2px;}
+  .stage{
+    max-width:1240px;margin:30px auto 0;border:1px solid var(--line);
+    border-radius:8px;background:var(--panel);overflow:auto;
+    box-shadow:0 40px 80px -40px #000, inset 0 0 0 1px #1d1810;
+    cursor:grab;
+  }
+  .stage:active{cursor:grabbing;}
+  svg{display:block;}
+  .tile polygon{stroke:var(--bg);stroke-width:2.6;stroke-linejoin:round;transition:filter .12s;}
+  .tile:hover polygon{filter:brightness(1.14) saturate(1.1);}
+  .tile text{text-anchor:middle;pointer-events:none;fill:#221806;
+    font-family:'Spline Sans Mono',monospace;}
+  .tile .k{font-weight:600;}
+  .tile .s{font-weight:400;opacity:.62;}
+  .tile.dim{opacity:.12;}
+  .tile.path polygon{stroke:var(--glow);stroke-width:3;filter:brightness(1.18);}
+  .tile.head polygon{stroke:#fff;stroke-width:3.6;filter:brightness(1.22);}
+  .hud{
+    position:fixed;left:50%;bottom:20px;transform:translateX(-50%);
+    background:#1b1610;border:1px solid var(--line);padding:11px 18px;
+    border-radius:32px;font-size:12px;color:var(--muted);display:flex;
+    gap:16px;align-items:center;box-shadow:0 16px 40px -16px #000;max-width:92vw;
+  }
+  .hud .now b{color:var(--glow);font-weight:600;}
+  .hud button{
+    background:none;border:1px solid var(--line);color:var(--muted);
+    font:inherit;font-size:11px;padding:4px 11px;border-radius:20px;cursor:pointer;
+  }
+  .hud button:hover{color:var(--ink);border-color:var(--muted);}
+  footer{max-width:1020px;margin:30px auto 0;color:#6d6454;font-size:11px;line-height:1.65;}
+  footer a{color:var(--rho);text-decoration:none;border-bottom:1px solid #4a4332;}
+</style>
+</head>
+<body>
+<header>
+  <div class="kicker">Orbifold · Voice Leading · Set Classes</div>
+  <h1>Harmony space — the <em>voice-leading</em> tessellation</h1>
+  <p class="lede">A tiling of the seven-note scale universe. Every polygon is a key;
+  every shared edge is a single-semitone voice-leading step. Hexagons run in
+  diagonal strips along the circle of fifths; triangles and rhombi fill the bands
+  between. A chord progression is a walk across edges — <b style="color:var(--ink)">click
+  tiles in sequence to trace one</b>, hover to preview a tile's neighbours.</p>
+  <div class="legend">
+    <div><span class="sw" style="background:var(--hex)"></span><b>Hexagon</b>&nbsp;— diatonic / major&nbsp;·&nbsp;6 neighbours</div>
+    <div><span class="sw" style="background:var(--rho)"></span><b>Rhombus</b>&nbsp;— acoustic / melodic minor&nbsp;·&nbsp;4</div>
+    <div><span class="sw" style="background:var(--tri-maj)"></span><b>Triangle&nbsp;▲</b>&nbsp;— harmonic major&nbsp;·&nbsp;3</div>
+    <div><span class="sw" style="background:var(--tri-min)"></span><b>Triangle&nbsp;▼</b>&nbsp;— harmonic minor&nbsp;·&nbsp;3</div>
+  </div>
+</header>
+
+<div class="stage" id="stage"></div>
+
+<div class="hud" id="hud">
+  <span class="now" id="now">hover a tile · click to build a progression</span>
+  <button id="undo">undo step</button>
+  <button id="clear">clear</button>
+</div>
+
+<footer>
+  Reconstructed from the “Rest of the Shapes” evenness chart on
+  <a href="https://harmoniousapp.net/p/0c/Beyond-Diatonic">harmoniousapp.net</a>.
+  Adjacency follows the site's published distance-1 voice-leading relationships.
+  Each tile shows its key only: <b style="color:var(--ink)">UPPER-CASE</b> for a
+  major-type scale (diatonic major, harmonic major), <b style="color:var(--ink)">lower-case</b>
+  for a minor-type scale (melodic minor, harmonic minor). The polygon's colour and
+  shape give the exact scale type. One edge = one semitone of voice-leading motion.
+</footer>
+
+<script>
+const TILING={"W":1098.0,"H":827.4,"tiles":[{"type":"hex","pts":[[204.0,699.5],[174.0,647.538],[114.0,647.538],[84.0,699.5],[114.0,751.461],[174.0,751.461]],"cx":144.0,"cy":699.5,"label":"D","scale":"major","up":true,"rel":"b"},{"type":"hex","pts":[[294.0,751.461],[264.0,699.5],[204.0,699.5],[174.0,751.461],[204.0,803.423],[264.0,803.423]],"cx":234.0,"cy":751.46,"label":"A","scale":"major","up":true,"rel":"f♯"},{"type":"hex","pts":[[144.0,491.654],[114.0,439.692],[54.0,439.692],[24.0,491.654],[54.0,543.615],[114.0,543.615]],"cx":84.0,"cy":491.65,"label":"A","scale":"major","up":true,"rel":"f♯"},{"type":"hex","pts":[[234.0,543.615],[204.0,491.654],[144.0,491.654],[114.0,543.615],[144.0,595.577],[204.0,595.577]],"cx":174.0,"cy":543.62,"label":"E","scale":"major","up":true,"rel":"c♯"},{"type":"hex","pts":[[324.0,595.577],[294.0,543.615],[234.0,543.615],[204.0,595.577],[234.0,647.538],[294.0,647.538]],"cx":264.0,"cy":595.58,"label":"B","scale":"major","up":true,"rel":"g♯"},{"type":"hex","pts":[[414.0,647.538],[384.0,595.577],[324.0,595.577],[294.0,647.538],[324.0,699.5],[384.0,699.5]],"cx":354.0,"cy":647.54,"label":"F♯","scale":"major","up":true,"rel":"d♯"},{"type":"hex","pts":[[504.0,699.5],[474.0,647.538],[414.0,647.538],[384.0,699.5],[414.0,751.461],[474.0,751.461]],"cx":444.0,"cy":699.5,"label":"D♭","scale":"major","up":true,"rel":"b♭"},{"type":"hex","pts":[[594.0,751.461],[564.0,699.5],[504.0,699.5],[474.0,751.461],[504.0,803.423],[564.0,803.423]],"cx":534.0,"cy":751.46,"label":"A♭","scale":"major","up":true,"rel":"f"},{"type":"hex","pts":[[174.0,335.769],[144.0,283.808],[84.0,283.808],[54.0,335.769],[84.0,387.731],[144.0,387.731]],"cx":114.0,"cy":335.77,"label":"B","scale":"major","up":true,"rel":"g♯"},{"type":"hex","pts":[[264.0,387.731],[234.0,335.769],[174.0,335.769],[144.0,387.731],[174.0,439.692],[234.0,439.692]],"cx":204.0,"cy":387.73,"label":"F♯","scale":"major","up":true,"rel":"d♯"},{"type":"hex","pts":[[354.0,439.692],[324.0,387.731],[264.0,387.731],[234.0,439.692],[264.0,491.654],[324.0,491.654]],"cx":294.0,"cy":439.69,"label":"D♭","scale":"major","up":true,"rel":"b♭"},{"type":"hex","pts":[[444.0,491.654],[414.0,439.692],[354.0,439.692],[324.0,491.654],[354.0,543.615],[414.0,543.615]],"cx":384.0,"cy":491.65,"label":"A♭","scale":"major","up":true,"rel":"f"},{"type":"hex","pts":[[534.0,543.615],[504.0,491.654],[444.0,491.654],[414.0,543.615],[444.0,595.577],[504.0,595.577]],"cx":474.0,"cy":543.62,"label":"E♭","scale":"major","up":true,"rel":"c"},{"type":"hex","pts":[[624.0,595.577],[594.0,543.615],[534.0,543.615],[504.0,595.577],[534.0,647.538],[594.0,647.538]],"cx":564.0,"cy":595.58,"label":"B♭","scale":"major","up":true,"rel":"g"},{"type":"hex","pts":[[714.0,647.538],[684.0,595.577],[624.0,595.577],[594.0,647.538],[624.0,699.5],[684.0,699.5]],"cx":654.0,"cy":647.54,"label":"F","scale":"major","up":true,"rel":"d"},{"type":"hex","pts":[[804.0,699.5],[774.0,647.538],[714.0,647.538],[684.0,699.5],[714.0,751.461],[774.0,751.461]],"cx":744.0,"cy":699.5,"label":"C","scale":"major","up":true,"rel":"a"},{"type":"hex","pts":[[894.0,751.461],[864.0,699.5],[804.0,699.5],[774.0,751.461],[804.0,803.423],[864.0,803.423]],"cx":834.0,"cy":751.46,"label":"G","scale":"major","up":true,"rel":"e"},{"type":"hex","pts":[[204.0,179.885],[174.0,127.923],[114.0,127.923],[84.0,179.885],[114.0,231.846],[174.0,231.846]],"cx":144.0,"cy":179.88,"label":"D♭","scale":"major","up":true,"rel":"b♭"},{"type":"hex","pts":[[294.0,231.846],[264.0,179.885],[204.0,179.885],[174.0,231.846],[204.0,283.808],[264.0,283.808]],"cx":234.0,"cy":231.85,"label":"A♭","scale":"major","up":true,"rel":"f"},{"type":"hex","pts":[[384.0,283.808],[354.0,231.846],[294.0,231.846],[264.0,283.808],[294.0,335.769],[354.0,335.769]],"cx":324.0,"cy":283.81,"label":"E♭","scale":"major","up":true,"rel":"c"},{"type":"hex","pts":[[474.0,335.769],[444.0,283.808],[384.0,283.808],[354.0,335.769],[384.0,387.731],[444.0,387.731]],"cx":414.0,"cy":335.77,"label":"B♭","scale":"major","up":true,"rel":"g"},{"type":"hex","pts":[[564.0,387.731],[534.0,335.769],[474.0,335.769],[444.0,387.731],[474.0,439.692],[534.0,439.692]],"cx":504.0,"cy":387.73,"label":"F","scale":"major","up":true,"rel":"d"},{"type":"hex","pts":[[654.0,439.692],[624.0,387.731],[564.0,387.731],[534.0,439.692],[564.0,491.654],[624.0,491.654]],"cx":594.0,"cy":439.69,"label":"C","scale":"major","up":true,"rel":"a"},{"type":"hex","pts":[[744.0,491.654],[714.0,439.692],[654.0,439.692],[624.0,491.654],[654.0,543.615],[714.0,543.615]],"cx":684.0,"cy":491.65,"label":"G","scale":"major","up":true,"rel":"e"},{"type":"hex","pts":[[834.0,543.615],[804.0,491.654],[744.0,491.654],[714.0,543.615],[744.0,595.577],[804.0,595.577]],"cx":774.0,"cy":543.62,"label":"D","scale":"major","up":true,"rel":"b"},{"type":"hex","pts":[[924.0,595.577],[894.0,543.615],[834.0,543.615],[804.0,595.577],[834.0,647.538],[894.0,647.538]],"cx":864.0,"cy":595.58,"label":"A","scale":"major","up":true,"rel":"f♯"},{"type":"hex","pts":[[1014.0,647.538],[984.0,595.577],[924.0,595.577],[894.0,647.538],[924.0,699.5],[984.0,699.5]],"cx":954.0,"cy":647.54,"label":"E","scale":"major","up":true,"rel":"c♯"},{"type":"hex","pts":[[324.0,75.962],[294.0,24.0],[234.0,24.0],[204.0,75.962],[234.0,127.923],[294.0,127.923]],"cx":264.0,"cy":75.96,"label":"B♭","scale":"major","up":true,"rel":"g"},{"type":"hex","pts":[[414.0,127.923],[384.0,75.962],[324.0,75.962],[294.0,127.923],[324.0,179.885],[384.0,179.885]],"cx":354.0,"cy":127.92,"label":"F","scale":"major","up":true,"rel":"d"},{"type":"hex","pts":[[504.0,179.885],[474.0,127.923],[414.0,127.923],[384.0,179.885],[414.0,231.846],[474.0,231.846]],"cx":444.0,"cy":179.88,"label":"C","scale":"major","up":true,"rel":"a"},{"type":"hex","pts":[[594.0,231.846],[564.0,179.885],[504.0,179.885],[474.0,231.846],[504.0,283.808],[564.0,283.808]],"cx":534.0,"cy":231.85,"label":"G","scale":"major","up":true,"rel":"e"},{"type":"hex","pts":[[684.0,283.808],[654.0,231.846],[594.0,231.846],[564.0,283.808],[594.0,335.769],[654.0,335.769]],"cx":624.0,"cy":283.81,"label":"D","scale":"major","up":true,"rel":"b"},{"type":"hex","pts":[[774.0,335.769],[744.0,283.808],[684.0,283.808],[654.0,335.769],[684.0,387.731],[744.0,387.731]],"cx":714.0,"cy":335.77,"label":"A","scale":"major","up":true,"rel":"f♯"},{"type":"hex","pts":[[864.0,387.731],[834.0,335.769],[774.0,335.769],[744.0,387.731],[774.0,439.692],[834.0,439.692]],"cx":804.0,"cy":387.73,"label":"E","scale":"major","up":true,"rel":"c♯"},{"type":"hex","pts":[[954.0,439.692],[924.0,387.731],[864.0,387.731],[834.0,439.692],[864.0,491.654],[924.0,491.654]],"cx":894.0,"cy":439.69,"label":"B","scale":"major","up":true,"rel":"g♯"},{"type":"hex","pts":[[1044.0,491.654],[1014.0,439.692],[954.0,439.692],[924.0,491.654],[954.0,543.615],[1014.0,543.615]],"cx":984.0,"cy":491.65,"label":"F♯","scale":"major","up":true,"rel":"d♯"},{"type":"hex","pts":[[624.0,75.962],[594.0,24.0],[534.0,24.0],[504.0,75.962],[534.0,127.923],[594.0,127.923]],"cx":564.0,"cy":75.96,"label":"A","scale":"major","up":true,"rel":"f♯"},{"type":"hex","pts":[[714.0,127.923],[684.0,75.962],[624.0,75.962],[594.0,127.923],[624.0,179.885],[684.0,179.885]],"cx":654.0,"cy":127.92,"label":"E","scale":"major","up":true,"rel":"c♯"},{"type":"hex","pts":[[804.0,179.885],[774.0,127.923],[714.0,127.923],[684.0,179.885],[714.0,231.846],[774.0,231.846]],"cx":744.0,"cy":179.88,"label":"B","scale":"major","up":true,"rel":"g♯"},{"type":"hex","pts":[[894.0,231.846],[864.0,179.885],[804.0,179.885],[774.0,231.846],[804.0,283.808],[864.0,283.808]],"cx":834.0,"cy":231.85,"label":"F♯","scale":"major","up":true,"rel":"d♯"},{"type":"hex","pts":[[984.0,283.808],[954.0,231.846],[894.0,231.846],[864.0,283.808],[894.0,335.769],[954.0,335.769]],"cx":924.0,"cy":283.81,"label":"D♭","scale":"major","up":true,"rel":"b♭"},{"type":"hex","pts":[[1074.0,335.769],[1044.0,283.808],[984.0,283.808],[954.0,335.769],[984.0,387.731],[1044.0,387.731]],"cx":1014.0,"cy":335.77,"label":"A♭","scale":"major","up":true,"rel":"f"},{"type":"hex","pts":[[924.0,75.962],[894.0,24.0],[834.0,24.0],[804.0,75.962],[834.0,127.923],[894.0,127.923]],"cx":864.0,"cy":75.96,"label":"A♭","scale":"major","up":true,"rel":"f"},{"type":"hex","pts":[[1014.0,127.923],[984.0,75.962],[924.0,75.962],[894.0,127.923],[924.0,179.885],[984.0,179.885]],"cx":954.0,"cy":127.92,"label":"E♭","scale":"major","up":true,"rel":"c"},{"type":"rho","pts":[[54.0,751.461],[84.0,803.423],[114.0,751.461],[84.0,699.5]],"cx":84.0,"cy":751.46,"label":"C","scale":"mel min","up":true,"ang":-90.0},{"type":"rho","pts":[[84.0,595.577],[114.0,647.538],[144.0,595.577],[114.0,543.615]],"cx":114.0,"cy":595.58,"label":"D","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[174.0,647.538],[114.0,647.538],[144.0,595.577]],"cx":144.0,"cy":630.22,"label":"D","scale":"harm maj","up":true},{"type":"tri","pts":[[114.0,751.461],[174.0,751.461],[144.0,803.423]],"cx":144.0,"cy":768.78,"label":"B","scale":"harm min","up":false},{"type":"rho","pts":[[174.0,647.538],[204.0,699.5],[234.0,647.538],[204.0,595.577]],"cx":204.0,"cy":647.54,"label":"A","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[264.0,699.5],[204.0,699.5],[234.0,647.538]],"cx":234.0,"cy":682.18,"label":"A","scale":"harm maj","up":true},{"type":"rho","pts":[[264.0,699.5],[294.0,751.461],[324.0,699.5],[294.0,647.538]],"cx":294.0,"cy":699.5,"label":"E","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[354.0,751.461],[294.0,751.461],[324.0,699.5]],"cx":324.0,"cy":734.14,"label":"E","scale":"harm maj","up":true},{"type":"rho","pts":[[354.0,751.461],[384.0,803.423],[414.0,751.461],[384.0,699.5]],"cx":384.0,"cy":751.46,"label":"B","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[114.0,439.692],[54.0,439.692],[84.0,387.731]],"cx":84.0,"cy":422.37,"label":"A","scale":"harm maj","up":true},{"type":"tri","pts":[[54.0,543.615],[114.0,543.615],[84.0,595.577]],"cx":84.0,"cy":560.94,"label":"F♯","scale":"harm min","up":false},{"type":"rho","pts":[[114.0,439.692],[144.0,491.654],[174.0,439.692],[144.0,387.731]],"cx":144.0,"cy":439.69,"label":"E","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[204.0,491.654],[144.0,491.654],[174.0,439.692]],"cx":174.0,"cy":474.33,"label":"E","scale":"harm maj","up":true},{"type":"tri","pts":[[144.0,595.577],[204.0,595.577],[174.0,647.538]],"cx":174.0,"cy":612.9,"label":"D♭","scale":"harm min","up":false},{"type":"rho","pts":[[204.0,491.654],[234.0,543.615],[264.0,491.654],[234.0,439.692]],"cx":234.0,"cy":491.65,"label":"B","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[294.0,543.615],[234.0,543.615],[264.0,491.654]],"cx":264.0,"cy":526.29,"label":"B","scale":"harm maj","up":true},{"type":"tri","pts":[[234.0,647.538],[294.0,647.538],[264.0,699.5]],"cx":264.0,"cy":664.86,"label":"A♭","scale":"harm min","up":false},{"type":"rho","pts":[[294.0,543.615],[324.0,595.577],[354.0,543.615],[324.0,491.654]],"cx":324.0,"cy":543.62,"label":"F♯","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[384.0,595.577],[324.0,595.577],[354.0,543.615]],"cx":354.0,"cy":578.26,"label":"F♯","scale":"harm maj","up":true},{"type":"tri","pts":[[324.0,699.5],[384.0,699.5],[354.0,751.461]],"cx":354.0,"cy":716.82,"label":"E♭","scale":"harm min","up":false},{"type":"rho","pts":[[384.0,595.577],[414.0,647.538],[444.0,595.577],[414.0,543.615]],"cx":414.0,"cy":595.58,"label":"D♭","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[474.0,647.538],[414.0,647.538],[444.0,595.577]],"cx":444.0,"cy":630.22,"label":"D♭","scale":"harm maj","up":true},{"type":"tri","pts":[[414.0,751.461],[474.0,751.461],[444.0,803.423]],"cx":444.0,"cy":768.78,"label":"B♭","scale":"harm min","up":false},{"type":"rho","pts":[[474.0,647.538],[504.0,699.5],[534.0,647.538],[504.0,595.577]],"cx":504.0,"cy":647.54,"label":"A♭","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[564.0,699.5],[504.0,699.5],[534.0,647.538]],"cx":534.0,"cy":682.18,"label":"A♭","scale":"harm maj","up":true},{"type":"rho","pts":[[564.0,699.5],[594.0,751.461],[624.0,699.5],[594.0,647.538]],"cx":594.0,"cy":699.5,"label":"E♭","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[654.0,751.461],[594.0,751.461],[624.0,699.5]],"cx":624.0,"cy":734.14,"label":"E♭","scale":"harm maj","up":true},{"type":"rho","pts":[[654.0,751.461],[684.0,803.423],[714.0,751.461],[684.0,699.5]],"cx":684.0,"cy":751.46,"label":"B♭","scale":"mel min","up":true,"ang":-90.0},{"type":"rho","pts":[[54.0,231.846],[84.0,283.808],[114.0,231.846],[84.0,179.885]],"cx":84.0,"cy":231.85,"label":"B","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[144.0,283.808],[84.0,283.808],[114.0,231.846]],"cx":114.0,"cy":266.49,"label":"B","scale":"harm maj","up":true},{"type":"tri","pts":[[84.0,387.731],[144.0,387.731],[114.0,439.692]],"cx":114.0,"cy":405.05,"label":"A♭","scale":"harm min","up":false},{"type":"rho","pts":[[144.0,283.808],[174.0,335.769],[204.0,283.808],[174.0,231.846]],"cx":174.0,"cy":283.81,"label":"F♯","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[234.0,335.769],[174.0,335.769],[204.0,283.808]],"cx":204.0,"cy":318.45,"label":"F♯","scale":"harm maj","up":true},{"type":"tri","pts":[[174.0,439.692],[234.0,439.692],[204.0,491.654]],"cx":204.0,"cy":457.01,"label":"E♭","scale":"harm min","up":false},{"type":"rho","pts":[[234.0,335.769],[264.0,387.731],[294.0,335.769],[264.0,283.808]],"cx":264.0,"cy":335.77,"label":"D♭","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[324.0,387.731],[264.0,387.731],[294.0,335.769]],"cx":294.0,"cy":370.41,"label":"D♭","scale":"harm maj","up":true},{"type":"tri","pts":[[264.0,491.654],[324.0,491.654],[294.0,543.615]],"cx":294.0,"cy":508.97,"label":"B♭","scale":"harm min","up":false},{"type":"rho","pts":[[324.0,387.731],[354.0,439.692],[384.0,387.731],[354.0,335.769]],"cx":354.0,"cy":387.73,"label":"A♭","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[414.0,439.692],[354.0,439.692],[384.0,387.731]],"cx":384.0,"cy":422.37,"label":"A♭","scale":"harm maj","up":true},{"type":"tri","pts":[[354.0,543.615],[414.0,543.615],[384.0,595.577]],"cx":384.0,"cy":560.94,"label":"F","scale":"harm min","up":false},{"type":"rho","pts":[[414.0,439.692],[444.0,491.654],[474.0,439.692],[444.0,387.731]],"cx":444.0,"cy":439.69,"label":"E♭","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[504.0,491.654],[444.0,491.654],[474.0,439.692]],"cx":474.0,"cy":474.33,"label":"E♭","scale":"harm maj","up":true},{"type":"tri","pts":[[444.0,595.577],[504.0,595.577],[474.0,647.538]],"cx":474.0,"cy":612.9,"label":"C","scale":"harm min","up":false},{"type":"rho","pts":[[504.0,491.654],[534.0,543.615],[564.0,491.654],[534.0,439.692]],"cx":534.0,"cy":491.65,"label":"B♭","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[594.0,543.615],[534.0,543.615],[564.0,491.654]],"cx":564.0,"cy":526.29,"label":"B♭","scale":"harm maj","up":true},{"type":"tri","pts":[[534.0,647.538],[594.0,647.538],[564.0,699.5]],"cx":564.0,"cy":664.86,"label":"G","scale":"harm min","up":false},{"type":"rho","pts":[[594.0,543.615],[624.0,595.577],[654.0,543.615],[624.0,491.654]],"cx":624.0,"cy":543.62,"label":"F","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[684.0,595.577],[624.0,595.577],[654.0,543.615]],"cx":654.0,"cy":578.26,"label":"F","scale":"harm maj","up":true},{"type":"tri","pts":[[624.0,699.5],[684.0,699.5],[654.0,751.461]],"cx":654.0,"cy":716.82,"label":"D","scale":"harm min","up":false},{"type":"rho","pts":[[684.0,595.577],[714.0,647.538],[744.0,595.577],[714.0,543.615]],"cx":714.0,"cy":595.58,"label":"C","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[774.0,647.538],[714.0,647.538],[744.0,595.577]],"cx":744.0,"cy":630.22,"label":"C","scale":"harm maj","up":true},{"type":"tri","pts":[[714.0,751.461],[774.0,751.461],[744.0,803.423]],"cx":744.0,"cy":768.78,"label":"A","scale":"harm min","up":false},{"type":"rho","pts":[[774.0,647.538],[804.0,699.5],[834.0,647.538],[804.0,595.577]],"cx":804.0,"cy":647.54,"label":"G","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[864.0,699.5],[804.0,699.5],[834.0,647.538]],"cx":834.0,"cy":682.18,"label":"G","scale":"harm maj","up":true},{"type":"rho","pts":[[864.0,699.5],[894.0,751.461],[924.0,699.5],[894.0,647.538]],"cx":894.0,"cy":699.5,"label":"D","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[954.0,751.461],[894.0,751.461],[924.0,699.5]],"cx":924.0,"cy":734.14,"label":"D","scale":"harm maj","up":true},{"type":"rho","pts":[[954.0,751.461],[984.0,803.423],[1014.0,751.461],[984.0,699.5]],"cx":984.0,"cy":751.46,"label":"A","scale":"mel min","up":true,"ang":-90.0},{"type":"rho","pts":[[84.0,75.962],[114.0,127.923],[144.0,75.962],[114.0,24.0]],"cx":114.0,"cy":75.96,"label":"D♭","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[174.0,127.923],[114.0,127.923],[144.0,75.962]],"cx":144.0,"cy":110.6,"label":"D♭","scale":"harm maj","up":true},{"type":"tri","pts":[[114.0,231.846],[174.0,231.846],[144.0,283.808]],"cx":144.0,"cy":249.17,"label":"B♭","scale":"harm min","up":false},{"type":"rho","pts":[[174.0,127.923],[204.0,179.885],[234.0,127.923],[204.0,75.962]],"cx":204.0,"cy":127.92,"label":"A♭","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[264.0,179.885],[204.0,179.885],[234.0,127.923]],"cx":234.0,"cy":162.56,"label":"A♭","scale":"harm maj","up":true},{"type":"tri","pts":[[204.0,283.808],[264.0,283.808],[234.0,335.769]],"cx":234.0,"cy":301.13,"label":"F","scale":"harm min","up":false},{"type":"rho","pts":[[264.0,179.885],[294.0,231.846],[324.0,179.885],[294.0,127.923]],"cx":294.0,"cy":179.88,"label":"E♭","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[354.0,231.846],[294.0,231.846],[324.0,179.885]],"cx":324.0,"cy":214.53,"label":"E♭","scale":"harm maj","up":true},{"type":"tri","pts":[[294.0,335.769],[354.0,335.769],[324.0,387.731]],"cx":324.0,"cy":353.09,"label":"C","scale":"harm min","up":false},{"type":"rho","pts":[[354.0,231.846],[384.0,283.808],[414.0,231.846],[384.0,179.885]],"cx":384.0,"cy":231.85,"label":"B♭","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[444.0,283.808],[384.0,283.808],[414.0,231.846]],"cx":414.0,"cy":266.49,"label":"B♭","scale":"harm maj","up":true},{"type":"tri","pts":[[384.0,387.731],[444.0,387.731],[414.0,439.692]],"cx":414.0,"cy":405.05,"label":"G","scale":"harm min","up":false},{"type":"rho","pts":[[444.0,283.808],[474.0,335.769],[504.0,283.808],[474.0,231.846]],"cx":474.0,"cy":283.81,"label":"F","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[534.0,335.769],[474.0,335.769],[504.0,283.808]],"cx":504.0,"cy":318.45,"label":"F","scale":"harm maj","up":true},{"type":"tri","pts":[[474.0,439.692],[534.0,439.692],[504.0,491.654]],"cx":504.0,"cy":457.01,"label":"D","scale":"harm min","up":false},{"type":"rho","pts":[[534.0,335.769],[564.0,387.731],[594.0,335.769],[564.0,283.808]],"cx":564.0,"cy":335.77,"label":"C","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[624.0,387.731],[564.0,387.731],[594.0,335.769]],"cx":594.0,"cy":370.41,"label":"C","scale":"harm maj","up":true},{"type":"tri","pts":[[564.0,491.654],[624.0,491.654],[594.0,543.615]],"cx":594.0,"cy":508.97,"label":"A","scale":"harm min","up":false},{"type":"rho","pts":[[624.0,387.731],[654.0,439.692],[684.0,387.731],[654.0,335.769]],"cx":654.0,"cy":387.73,"label":"G","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[714.0,439.692],[654.0,439.692],[684.0,387.731]],"cx":684.0,"cy":422.37,"label":"G","scale":"harm maj","up":true},{"type":"tri","pts":[[654.0,543.615],[714.0,543.615],[684.0,595.577]],"cx":684.0,"cy":560.94,"label":"E","scale":"harm min","up":false},{"type":"rho","pts":[[714.0,439.692],[744.0,491.654],[774.0,439.692],[744.0,387.731]],"cx":744.0,"cy":439.69,"label":"D","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[804.0,491.654],[744.0,491.654],[774.0,439.692]],"cx":774.0,"cy":474.33,"label":"D","scale":"harm maj","up":true},{"type":"tri","pts":[[744.0,595.577],[804.0,595.577],[774.0,647.538]],"cx":774.0,"cy":612.9,"label":"B","scale":"harm min","up":false},{"type":"rho","pts":[[804.0,491.654],[834.0,543.615],[864.0,491.654],[834.0,439.692]],"cx":834.0,"cy":491.65,"label":"A","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[894.0,543.615],[834.0,543.615],[864.0,491.654]],"cx":864.0,"cy":526.29,"label":"A","scale":"harm maj","up":true},{"type":"tri","pts":[[834.0,647.538],[894.0,647.538],[864.0,699.5]],"cx":864.0,"cy":664.86,"label":"F♯","scale":"harm min","up":false},{"type":"rho","pts":[[894.0,543.615],[924.0,595.577],[954.0,543.615],[924.0,491.654]],"cx":924.0,"cy":543.62,"label":"E","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[984.0,595.577],[924.0,595.577],[954.0,543.615]],"cx":954.0,"cy":578.26,"label":"E","scale":"harm maj","up":true},{"type":"tri","pts":[[924.0,699.5],[984.0,699.5],[954.0,751.461]],"cx":954.0,"cy":716.82,"label":"D♭","scale":"harm min","up":false},{"type":"rho","pts":[[984.0,595.577],[1014.0,647.538],[1044.0,595.577],[1014.0,543.615]],"cx":1014.0,"cy":595.58,"label":"B","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[144.0,75.962],[204.0,75.962],[174.0,127.923]],"cx":174.0,"cy":93.28,"label":"C","scale":"harm min","up":false},{"type":"tri","pts":[[234.0,127.923],[294.0,127.923],[264.0,179.885]],"cx":264.0,"cy":145.24,"label":"G","scale":"harm min","up":false},{"type":"tri","pts":[[384.0,75.962],[324.0,75.962],[354.0,24.0]],"cx":354.0,"cy":58.64,"label":"F","scale":"harm maj","up":true},{"type":"tri","pts":[[324.0,179.885],[384.0,179.885],[354.0,231.846]],"cx":354.0,"cy":197.21,"label":"D","scale":"harm min","up":false},{"type":"rho","pts":[[384.0,75.962],[414.0,127.923],[444.0,75.962],[414.0,24.0]],"cx":414.0,"cy":75.96,"label":"C","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[474.0,127.923],[414.0,127.923],[444.0,75.962]],"cx":444.0,"cy":110.6,"label":"C","scale":"harm maj","up":true},{"type":"tri","pts":[[414.0,231.846],[474.0,231.846],[444.0,283.808]],"cx":444.0,"cy":249.17,"label":"A","scale":"harm min","up":false},{"type":"rho","pts":[[474.0,127.923],[504.0,179.885],[534.0,127.923],[504.0,75.962]],"cx":504.0,"cy":127.92,"label":"G","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[564.0,179.885],[504.0,179.885],[534.0,127.923]],"cx":534.0,"cy":162.56,"label":"G","scale":"harm maj","up":true},{"type":"tri","pts":[[504.0,283.808],[564.0,283.808],[534.0,335.769]],"cx":534.0,"cy":301.13,"label":"E","scale":"harm min","up":false},{"type":"rho","pts":[[564.0,179.885],[594.0,231.846],[624.0,179.885],[594.0,127.923]],"cx":594.0,"cy":179.88,"label":"D","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[654.0,231.846],[594.0,231.846],[624.0,179.885]],"cx":624.0,"cy":214.53,"label":"D","scale":"harm maj","up":true},{"type":"tri","pts":[[594.0,335.769],[654.0,335.769],[624.0,387.731]],"cx":624.0,"cy":353.09,"label":"B","scale":"harm min","up":false},{"type":"rho","pts":[[654.0,231.846],[684.0,283.808],[714.0,231.846],[684.0,179.885]],"cx":684.0,"cy":231.85,"label":"A","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[744.0,283.808],[684.0,283.808],[714.0,231.846]],"cx":714.0,"cy":266.49,"label":"A","scale":"harm maj","up":true},{"type":"tri","pts":[[684.0,387.731],[744.0,387.731],[714.0,439.692]],"cx":714.0,"cy":405.05,"label":"F♯","scale":"harm min","up":false},{"type":"rho","pts":[[744.0,283.808],[774.0,335.769],[804.0,283.808],[774.0,231.846]],"cx":774.0,"cy":283.81,"label":"E","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[834.0,335.769],[774.0,335.769],[804.0,283.808]],"cx":804.0,"cy":318.45,"label":"E","scale":"harm maj","up":true},{"type":"tri","pts":[[774.0,439.692],[834.0,439.692],[804.0,491.654]],"cx":804.0,"cy":457.01,"label":"D♭","scale":"harm min","up":false},{"type":"rho","pts":[[834.0,335.769],[864.0,387.731],[894.0,335.769],[864.0,283.808]],"cx":864.0,"cy":335.77,"label":"B","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[924.0,387.731],[864.0,387.731],[894.0,335.769]],"cx":894.0,"cy":370.41,"label":"B","scale":"harm maj","up":true},{"type":"tri","pts":[[864.0,491.654],[924.0,491.654],[894.0,543.615]],"cx":894.0,"cy":508.97,"label":"A♭","scale":"harm min","up":false},{"type":"rho","pts":[[924.0,387.731],[954.0,439.692],[984.0,387.731],[954.0,335.769]],"cx":954.0,"cy":387.73,"label":"F♯","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[1014.0,439.692],[954.0,439.692],[984.0,387.731]],"cx":984.0,"cy":422.37,"label":"F♯","scale":"harm maj","up":true},{"type":"tri","pts":[[954.0,543.615],[1014.0,543.615],[984.0,595.577]],"cx":984.0,"cy":560.94,"label":"E♭","scale":"harm min","up":false},{"type":"tri","pts":[[444.0,75.962],[504.0,75.962],[474.0,127.923]],"cx":474.0,"cy":93.28,"label":"B","scale":"harm min","up":false},{"type":"tri","pts":[[534.0,127.923],[594.0,127.923],[564.0,179.885]],"cx":564.0,"cy":145.24,"label":"F♯","scale":"harm min","up":false},{"type":"tri","pts":[[684.0,75.962],[624.0,75.962],[654.0,24.0]],"cx":654.0,"cy":58.64,"label":"E","scale":"harm maj","up":true},{"type":"tri","pts":[[624.0,179.885],[684.0,179.885],[654.0,231.846]],"cx":654.0,"cy":197.21,"label":"D♭","scale":"harm min","up":false},{"type":"rho","pts":[[684.0,75.962],[714.0,127.923],[744.0,75.962],[714.0,24.0]],"cx":714.0,"cy":75.96,"label":"B","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[774.0,127.923],[714.0,127.923],[744.0,75.962]],"cx":744.0,"cy":110.6,"label":"B","scale":"harm maj","up":true},{"type":"tri","pts":[[714.0,231.846],[774.0,231.846],[744.0,283.808]],"cx":744.0,"cy":249.17,"label":"A♭","scale":"harm min","up":false},{"type":"rho","pts":[[774.0,127.923],[804.0,179.885],[834.0,127.923],[804.0,75.962]],"cx":804.0,"cy":127.92,"label":"F♯","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[864.0,179.885],[804.0,179.885],[834.0,127.923]],"cx":834.0,"cy":162.56,"label":"F♯","scale":"harm maj","up":true},{"type":"tri","pts":[[804.0,283.808],[864.0,283.808],[834.0,335.769]],"cx":834.0,"cy":301.13,"label":"E♭","scale":"harm min","up":false},{"type":"rho","pts":[[864.0,179.885],[894.0,231.846],[924.0,179.885],[894.0,127.923]],"cx":894.0,"cy":179.88,"label":"D♭","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[954.0,231.846],[894.0,231.846],[924.0,179.885]],"cx":924.0,"cy":214.53,"label":"D♭","scale":"harm maj","up":true},{"type":"tri","pts":[[894.0,335.769],[954.0,335.769],[924.0,387.731]],"cx":924.0,"cy":353.09,"label":"B♭","scale":"harm min","up":false},{"type":"rho","pts":[[954.0,231.846],[984.0,283.808],[1014.0,231.846],[984.0,179.885]],"cx":984.0,"cy":231.85,"label":"A♭","scale":"mel min","up":true,"ang":-90.0},{"type":"tri","pts":[[1044.0,283.808],[984.0,283.808],[1014.0,231.846]],"cx":1014.0,"cy":266.49,"label":"A♭","scale":"harm maj","up":true},{"type":"tri","pts":[[984.0,387.731],[1044.0,387.731],[1014.0,439.692]],"cx":1014.0,"cy":405.05,"label":"F","scale":"harm min","up":false},{"type":"tri","pts":[[744.0,75.962],[804.0,75.962],[774.0,127.923]],"cx":774.0,"cy":93.28,"label":"B♭","scale":"harm min","up":false},{"type":"tri","pts":[[834.0,127.923],[894.0,127.923],[864.0,179.885]],"cx":864.0,"cy":145.24,"label":"F","scale":"harm min","up":false},{"type":"tri","pts":[[984.0,75.962],[924.0,75.962],[954.0,24.0]],"cx":954.0,"cy":58.64,"label":"E♭","scale":"harm maj","up":true},{"type":"tri","pts":[[924.0,179.885],[984.0,179.885],[954.0,231.846]],"cx":954.0,"cy":197.21,"label":"C","scale":"harm min","up":false},{"type":"rho","pts":[[984.0,75.962],[1014.0,127.923],[1044.0,75.962],[1014.0,24.0]],"cx":1014.0,"cy":75.96,"label":"B♭","scale":"mel min","up":true,"ang":-90.0}]};
+(function(){
+  const SVGNS='http://www.w3.org/2000/svg';
+  const stage=document.getElementById('stage');
+  const svg=document.createElementNS(SVGNS,'svg');
+  svg.setAttribute('viewBox',`0 0 ${TILING.W} ${TILING.H}`);
+  svg.setAttribute('width',TILING.W);
+  svg.setAttribute('height',TILING.H);
+
+  const FILL={hex:'#cd7430',rho:'#dcb648','tri-up':'#7c9d6a','tri-dn':'#6b8db1'};
+
+  // ---- adjacency via shared edges ----
+  const tiles=TILING.tiles;
+  // Vertices are snapped to an exact grid in the data, so shared vertices
+  // are bit-identical -- keying edges at full precision is exact.
+  const ekey=(a,b)=>[a,b].map(p=>p[0].toFixed(3)+','+p[1].toFixed(3)).sort().join('|');
+  const emap={};
+  tiles.forEach((t,i)=>{
+    t._e=[];
+    for(let k=0;k<t.pts.length;k++){
+      const e=ekey(t.pts[k],t.pts[(k+1)%t.pts.length]);
+      t._e.push(e); (emap[e]=emap[e]||[]).push(i);
+    }
+  });
+  tiles.forEach((t,i)=>{
+    const nb=new Set();
+    t._e.forEach(e=>emap[e].forEach(j=>{if(j!==i)nb.add(j);}));
+    t._nb=[...nb];
+  });
+
+  // ---- draw ----
+  const nodes=[];
+  tiles.forEach((t,i)=>{
+    const g=document.createElementNS(SVGNS,'g');
+    g.setAttribute('class','tile'); g.dataset.i=i;
+
+    const poly=document.createElementNS(SVGNS,'polygon');
+    poly.setAttribute('points',t.pts.map(p=>p.join(',')).join(' '));
+    poly.setAttribute('fill',
+        t.type==='hex' ? FILL.hex
+      : t.type==='rho' ? FILL.rho
+      : t.up ? FILL['tri-up'] : FILL['tri-dn']);
+    g.appendChild(poly);
+
+    // Case convention: a key shown UPPER-CASE is a major-type scale
+    // (hexagon = diatonic major, up-triangle = harmonic major); a key shown
+    // lower-case is a minor-type scale (rhombus = melodic minor,
+    // down-triangle = harmonic minor). Colour still gives the exact type.
+    const major = (t.type==='hex') || (t.type==='tri' && t.up);
+    const keyText = major ? t.label.toUpperCase() : t.label.toLowerCase();
+
+    if(t.type==='hex'){
+      // major key (bold, upper) with its relative natural minor below,
+      // smaller and parenthesised, e.g.  C  /  (a)
+      const ks=19, rs=11, dy=10;
+      const k=document.createElementNS(SVGNS,'text');
+      k.setAttribute('class','k'); k.setAttribute('x',t.cx);
+      k.setAttribute('y',t.cy-dy+ks*0.34);
+      k.setAttribute('font-size',ks);
+      k.textContent=keyText; g.appendChild(k);
+      const rel=document.createElementNS(SVGNS,'text');
+      rel.setAttribute('class','s'); rel.setAttribute('x',t.cx);
+      rel.setAttribute('y',t.cy+dy+rs*0.34);
+      rel.setAttribute('font-size',rs);
+      rel.textContent='('+t.rel.toLowerCase()+')'; g.appendChild(rel);
+    }else if(t.type==='rho'){
+      // thin rhombus: key only, rotated along the long axis
+      const fs=13;
+      const k=document.createElementNS(SVGNS,'text');
+      k.setAttribute('class','k'); k.setAttribute('x',t.cx);
+      k.setAttribute('y',t.cy+fs*0.34);
+      k.setAttribute('font-size',fs);
+      k.setAttribute('transform',`rotate(${t.ang} ${t.cx} ${t.cy})`);
+      k.textContent=keyText; g.appendChild(k);
+    }else{
+      // triangle: key only, nudged toward the wide base
+      const ks=13;
+      const baseY = t.cy + (t.up ? -3 : 3.5) + ks*0.34;
+      const k=document.createElementNS(SVGNS,'text');
+      k.setAttribute('class','k'); k.setAttribute('x',t.cx);
+      k.setAttribute('y',baseY); k.setAttribute('font-size',ks);
+      k.textContent=keyText; g.appendChild(k);
+    }
+    svg.appendChild(g); nodes.push(g);
+  });
+  stage.appendChild(svg);
+
+  // ---- click-to-build-progression + hover preview ----
+  const path=[];
+  const now=document.getElementById('now');
+
+  // Format a tile for the status line: case-converted key + full scale name.
+  function tileName(t){
+    const major=(t.type==='hex')||(t.type==='tri'&&t.up);
+    const key=major?t.label.toUpperCase():t.label.toLowerCase();
+    return key+'\u2009'+t.scale;
+  }
+
+  function render(){
+    const inPath=new Set(path);
+    nodes.forEach((n,i)=>{
+      n.classList.remove('dim','path','head');
+      if(path.length){
+        if(i===path[path.length-1]) n.classList.add('head');
+        else if(inPath.has(i)) n.classList.add('path');
+      }
+    });
+    if(path.length){
+      const seq=path.map(i=>tileName(tiles[i]));
+      now.innerHTML='progression: '+seq.map(s=>'<b>'+s+'</b>').join(' \u2192 ');
+    }else{
+      now.textContent='hover a tile \u00b7 click to build a progression';
+    }
+  }
+  function preview(i){
+    if(path.length) return;
+    const keep=new Set([i,...tiles[i]._nb]);
+    nodes.forEach((n,j)=>n.classList.toggle('dim',!keep.has(j)));
+    nodes[i].classList.add('head');
+    const t=tiles[i];
+    now.innerHTML='<b>'+tileName(t)+'</b> \u2014 '+t._nb.length+
+      ' scales one semitone away';
+  }
+  function clearPreview(){
+    if(path.length){ render(); return; }
+    nodes.forEach(n=>n.classList.remove('dim','head'));
+    now.textContent='hover a tile \u00b7 click to build a progression';
+  }
+
+  svg.addEventListener('mouseover',e=>{
+    const g=e.target.closest('.tile'); if(g) preview(+g.dataset.i);
+  });
+  svg.addEventListener('mouseout',e=>{
+    if(e.target.closest('.tile')) clearPreview();
+  });
+  svg.addEventListener('click',e=>{
+    const g=e.target.closest('.tile'); if(!g) return;
+    const i=+g.dataset.i;
+    if(!path.length){ path.push(i); }
+    else{
+      const last=path[path.length-1];
+      if(i===last){ path.pop(); }
+      else if(tiles[last]._nb.includes(i)){ path.push(i); }
+      else{ path.length=0; path.push(i); }
+    }
+    render();
+  });
+  document.getElementById('undo').onclick=()=>{ path.pop(); render(); };
+  document.getElementById('clear').onclick=()=>{ path.length=0; render(); };
+
+  // ---- drag to pan ----
+  let drag=null;
+  stage.addEventListener('mousedown',e=>{
+    if(e.target.closest('.tile')) return;
+    drag={x:e.clientX,y:e.clientY,l:stage.scrollLeft,t:stage.scrollTop};
+  });
+  window.addEventListener('mousemove',e=>{
+    if(!drag) return;
+    stage.scrollLeft=drag.l-(e.clientX-drag.x);
+    stage.scrollTop =drag.t-(e.clientY-drag.y);
+  });
+  window.addEventListener('mouseup',()=>drag=null);
+
+  requestAnimationFrame(()=>{
+    stage.scrollLeft=(svg.width.baseVal.value-stage.clientWidth)/2;
+    stage.scrollTop =(svg.height.baseVal.value-stage.clientHeight)/2;
+  });
+})();
+</script>
+</body>
+</html>
